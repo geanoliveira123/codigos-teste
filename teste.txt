@@ -1,0 +1,151 @@
+
+*&---------------------------------------------------------------------*
+*&                                                                     *
+*&---------------------------------------------------------------------*
+*& Autor......:                                                        *
+*& Data.......: 27/08/2018                                             *
+*& Descrição  : Converte Numeros                                       *
+*& Transação..:                                                        *
+*& Projeto....:                                                        *
+*&---------------------------------------------------------------------*
+
+REPORT  zteste.
+
+*&---------------------------------------------------------------------*
+*&  Declarações
+*&---------------------------------------------------------------------*
+
+DATA: gv_tdlcount   TYPE itcdp-tdlcount,
+      gv_tdnumberin TYPE itcdp-tdnumberin,
+      gv_tdupper    TYPE itcdp-tdupper,
+      gv_tdnumfixc  TYPE itcdp-tdnumfixc,
+      gv_tdnumoutl  TYPE itcdp-tdnumoutl,
+      gv_string     TYPE tline-tdline,
+      gv_length     TYPE i,
+      gv_num        TYPE string,
+      gv_valor      TYPE string.
+
+TYPES: BEGIN OF ty_conv,
+    romano  TYPE tline-tdline,
+    arabico TYPE itcdp-tdlcount,
+    END OF ty_conv.
+
+DATA: gt_conv TYPE TABLE OF ty_conv,
+      gs_conv TYPE ty_conv.
+
+*&---------------------------------------------------------------------*
+*&  Tela de Seleção
+*&---------------------------------------------------------------------*
+
+SELECTION-SCREEN: BEGIN OF BLOCK b1 WITH FRAME TITLE text-001.
+
+PARAMETERS: rb_arab RADIOBUTTON GROUP rad1 USER-COMMAND rad DEFAULT 'X',
+            rb_roma RADIOBUTTON GROUP rad1.
+
+PARAMETERS p_num   TYPE itcdp-tdlcount.
+PARAMETERS p_roman TYPE string.
+
+SELECTION-SCREEN: END OF BLOCK b1.
+
+AT SELECTION-SCREEN  OUTPUT.
+  PERFORM selection_screen.
+
+START-OF-SELECTION.
+
+  PERFORM: processa_dados,
+           processa_saida.
+
+*&---------------------------------------------------------------------*
+*&      Form  processa_dados
+*&---------------------------------------------------------------------*
+FORM processa_dados .
+
+  DATA: l_tabix TYPE sy-tabix.
+
+  CLEAR: gv_string.
+
+  CASE 'X'.
+    WHEN rb_arab.
+
+      CALL FUNCTION 'CONVERT_NUMBER'
+        EXPORTING
+          tdlcount   = p_num
+          tdnumberin = 'ROMAN'
+          tdupper    = gv_tdupper
+          tdnumfixc  = gv_tdnumfixc
+          tdnumoutl  = gv_tdnumoutl
+        IMPORTING
+          string     = gv_string
+          length     = gv_length.
+
+    WHEN rb_roma.
+
+      DO 4999 TIMES.
+        ADD 1 TO p_num.
+
+        CALL FUNCTION 'CONVERT_NUMBER'
+          EXPORTING
+            tdlcount   = p_num
+            tdnumberin = 'ROMAN'
+            tdupper    = gv_tdupper
+            tdnumfixc  = gv_tdnumfixc
+            tdnumoutl  = gv_tdnumoutl
+          IMPORTING
+            string     = gv_string
+            length     = gv_length.
+
+        TRANSLATE gv_string TO UPPER CASE.
+
+        IF p_roman EQ gv_string.
+          MOVE p_num TO gv_num.
+          EXIT.
+        ENDIF.
+
+        CLEAR gv_string.
+      ENDDO.
+  ENDCASE.
+  CLEAR: p_num,
+         p_roman.
+
+ENDFORM.                    " processa_dados
+*&---------------------------------------------------------------------*
+*&      Form  processa_saida
+*&---------------------------------------------------------------------*
+FORM processa_saida .
+
+  IF rb_arab EQ 'X'.
+
+    TRANSLATE gv_string TO UPPER CASE.
+
+    WRITE: 'Número convertido:  ', gv_string.
+
+  ELSE.
+
+    WRITE: 'Número convertido:  ', gv_num.
+
+  ENDIF.
+
+ENDFORM.                    " processa_saida
+*&---------------------------------------------------------------------*
+*&      Form  selection_screen
+*&---------------------------------------------------------------------*
+FORM selection_screen .
+
+  LOOP AT SCREEN.
+    CASE 'X'.
+      WHEN rb_arab.
+        IF screen-name EQ 'P_ROMAN'.
+          CLEAR p_num.
+          MOVE: '0'  TO screen-input.
+          MODIFY SCREEN.
+        ENDIF.
+      WHEN rb_roma.
+        IF screen-name EQ 'P_NUM'.
+          CLEAR p_roman.
+          MOVE: '0'  TO screen-input.
+          MODIFY SCREEN.
+        ENDIF.
+    ENDCASE.
+  ENDLOOP.
+
+ENDFORM.                    " selection_screen
